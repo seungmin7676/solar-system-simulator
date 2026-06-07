@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>태양계 관측 시뮬레이터</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #titleScreen, #helpScreen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 6, 14, 0.72);
+            z-index: 10;
+        }
+
+        .menuBox {
+            max-width: 460px;
+            background: rgba(20, 20, 28, 0.85);
+            color: #f3f3f3;
+            padding: 36px 42px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .menuBox h1 {
+            margin: 0 0 14px;
+            font-size: 28px;
+            letter-spacing: 1px;
+            color: #ffd863;
+        }
+
+        .menuBox h2 {
+            margin: 0 0 20px;
+            font-size: 21px;
+            color: #ffd863;
+        }
+
+        .menuBox .subtitle {
+            margin: 0 0 28px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #cfcfcf;
+        }
+
+        .menuButtons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+        }
+
+        .menuBtn {
+            padding: 11px 26px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #eaeaea;
+            background: rgba(255, 216, 99, 0.12);
+            border: 1px solid rgba(255, 216, 99, 0.4);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .menuBtn:hover {
+            background: rgba(255, 216, 99, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .helpList {
+            text-align: left;
+            margin: 0 0 28px;
+            padding: 0;
+            list-style: none;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #cfcfcf;
+        }
+
+        .helpList li {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .helpList b {
+            flex: 0 0 112px;
+            color: #ffd863;
+        }
+
+        .helpList span {
+            flex: 1;
+        }
+
+        #instructions {
+            position: fixed;
+            left: 20px;
+            top: 16px;
+            color: #eaeaea;
+            background: rgba(20, 20, 28, 0.55);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+            pointer-events: none;
+        }
+
+        #speedLabel {
+            color: #ffd863;
+            font-weight: bold;
+        }
+
+        #infoPanel {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            max-width: 340px;
+            background: rgba(20, 20, 28, 0.8);
+            color: #f3f3f3;
+            padding: 16px 20px;
+            border-radius: 10px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            pointer-events: none;
+        }
+
+        #infoPanel.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #infoPanel h2 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            color: #ffd863;
+        }
+
+        #infoPanel p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #cfcfcf;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="titleScreen">
+        <div class="menuBox">
+            <h1>태양계 관측 시뮬레이터</h1>
+            <p class="subtitle">
+                실시간 3D로 구현된 태양계를 자유롭게 비행하며 관측하는 시뮬레이터입니다.<br>
+                태양과 8개의 행성을 가까이서 살펴보고, 시간 배속과 거리·크기 비율을 바꿔가며 탐험해보세요.
+            </p>
+            <div class="menuButtons">
+                <button id="btnStart" class="menuBtn">시작</button>
+                <button id="btnHelp" class="menuBtn">조작 방법</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="helpScreen" class="hidden">
+        <div class="menuBox">
+            <h2>조작 방법</h2>
+            <ul class="helpList">
+                <li><b>W A S D</b><span>전진 / 후진 / 좌우 이동</span></li>
+                <li><b>마우스 드래그</b><span>시점 회전 (상하 포함)</span></li>
+                <li><b>마우스 휠</b><span>확대 / 축소</span></li>
+                <li><b>클릭</b><span>천체 선택 — 선택하면 카메라가 자동으로 따라가며, 드래그하면 추적이 풀립니다</span></li>
+                <li><b>+ / -</b><span>공전 속도 배율 조절</span></li>
+                <li><b>Space</b><span>일시정지 / 재생</span></li>
+                <li><b>R</b><span>실제 비율 ↔ 압축 비율 전환</span></li>
+            </ul>
+            <div class="menuButtons">
+                <button id="btnHelpBack" class="menuBtn">뒤로 가기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="instructions" class="hidden">
+        W A S D : 전진 / 후진 / 좌우 이동&nbsp;&nbsp;|&nbsp;&nbsp;마우스 드래그 : 시점 회전 (상하 포함)<br>
+        마우스 휠 : 확대 / 축소&nbsp;&nbsp;|&nbsp;&nbsp;클릭 : 천체 선택 (자동 추적 시작, 드래그하면 해제)<br>
+        + / - : 공전 속도 배율 (현재 <span id="speedLabel">x1</span>)&nbsp;&nbsp;|&nbsp;&nbsp;Space : 일시정지<br>
+        R : 비율 전환 (현재 <span id="scaleModeLabel">압축 비율</span>)
+    </div>
+    <div id="infoPanel">
+        <h2 id="infoTitle"></h2>
+        <p id="infoDesc"></p>
+    </div>
+    <script type="text/javascript" src="shaders/initShaders2.js"></script>
+    <script type="text/javascript" src="shaders/MV.js"></script>
+    <script type="module">
+        var gl;
+        let vertices = [];
+        var program1, program2, programSun;  // program1: 행성(점광원 Blinn-Phong+텍스처), program2: 단색(피킹/별/궤도선/선택표시), programSun: 태양(발광+코로나)
+        var startTime = Date.now();
+        var lastTime = Date.now();
+
+        // ---- 장면 스케일/시간 상수 ----
+        const SUN_RADIUS = 4.5;
+        const MOON_ORBIT_RADIUS = 1.8, MOON_ORBIT_SPEED = 4.5, MOON_SIZE = 0.27;
+        const RING_TEX_UNIT = 8, MOON_TEX_UNIT = 9;
+        const SUN_ID = -2;                 // selectedIndex가 이 값이면 태양이 선택된 상태
+        const ORBIT_TIME_SCALE = 0.25;     // globalAngle 누적 속도 (관측하기 좋도록 압축한 값)
+        const MIN_CAMERA_RADIUS = 6;
+        const COMPRESSED_MAX_CAMERA_RADIUS = 150, REAL_MAX_CAMERA_RADIUS = 720;
+        var maxCameraRadius = COMPRESSED_MAX_CAMERA_RADIUS;   // 비율 모드에 따라 바뀌는 비행 한계
+
+        // ---- 실제 비율 vs 압축 비율 토글 ----
+        // 'compressed': 관측하기 좋도록 압축한 값 (기본) / 'real': 실제 천문학적 비율(거리=AU, 크기=지구 반지름 비율)에서 유도한 값
+        // 두 값 모두 같은 종류의 실제 비(比)에서 나왔지만, 거리·크기에 서로 다른 환산 계수를 적용했다
+        // — 그렇지 않으면(둘 다 동일 계수) 행성이 점보다 작아져 화면에서 사실상 사라지기 때문이다.
+        var scaleMode = 'compressed';
+
+        // ---- 카메라 (자유비행: yaw/pitch로 시선 방향을 관리) ----
+        var eye = vec3(58, 34, 78);
+        var at = vec3(0, 0, 0);
+        var cameraVec = vec3(0, 0, -1);
+        var yaw = Math.atan2(-eye[0], -eye[2]);
+        var pitch = Math.atan2(-eye[1], Math.sqrt(eye[0] * eye[0] + eye[2] * eye[2]));
+        updateCameraVec();
+        var isDragging = false;
+        var dragMoved = false;
+        var lastPosX = 0, lastPosY = 0;
+        var mouseDownX = 0, mouseDownY = 0;
+        const DRAG_THRESHOLD = 4;   // 클릭과 드래그를 구분하는 픽셀 임계값
+
+        var appState = 'title';   // 'title': 메인화면, 'help': 조작 방법 화면, 'playing': 시뮬레이션 조작 가능
+
+        var worldMatrix, viewMatrix, projectMatrix;
+        var globalAngle = 0;
+        var timeScale = 1.0;
+        var pausedTimeScale = null;   // null이 아니면 일시정지 상태 (이전 timeScale을 기억)
+        var selectedIndex = -1;   // -1: 없음, -2(SUN_ID): 태양, 0~7: 행성 인덱스
+        var followTarget = false;     // true면 카메라 시선이 선택된 천체를 부드럽게 추적
+        const FOLLOW_LERP_SPEED = 3.0;  // 추적 시 시선이 목표 방향으로 따라붙는 속도
+
+        // program1 (행성/고리/위성) uniform 위치
+        var worldMatLoc1, viewMatLoc1, projMatLoc1, texImageLoc1, eyePosLoc1, sunPosLoc1;
+        var matShLoc1, matSpecLoc1, matAmbiLoc1, matEmitLoc1;
+        // program2 (단색: 피킹/별/궤도선/선택 하이라이트) uniform 위치
+        var worldMatLoc2, viewMatLoc2, projMatLoc2, uColorLoc2;
+        // programSun (태양 발광) uniform 위치
+        var worldMatLocS, viewMatLocS, projMatLocS, eyePosLocS, timeLocS, baseColorLocS, glowColorLocS;
+
+        // 절차적으로 생성되는 지오메트리들의 {offset, count}
+        var sphereGeo, ringGeo, circleGeo, starGeo;
+
+        var sunInfo = {
+            name: "태양 (the Sun)",
+            desc: "태양계의 중심에 있는 항성으로, 수소 핵융합 반응을 통해 막대한 빛과 열을 방출합니다. 태양계 전체 질량의 99% 이상을 차지하며, 모든 행성은 태양의 중력에 이끌려 궤도를 돕니다."
+        };
+
+        // 행성 데이터 — orbitRadius/size는 실제 비율이 아니라 "관측하기 좋도록" 압축한 값.
+        // realOrbitRadius/realSize는 실제 천문학적 비(比) — 거리는 AU, 크기는 지구 반지름 배수 — 에서 유도한 값으로,
+        // R 키로 전환했을 때 행성 사이의 진짜 거리·크기 차이가 얼마나 극단적인지 보여준다.
+        // (거리·크기에 서로 다른 환산 계수를 쓴 이유: 동일 계수를 쓰면 행성이 점보다 작아져 화면에서 사라져 버리기 때문)
+        var planets = [
+            {
+                name: "수성 (Mercury)",
+                desc: "태양에서 가장 가까운 행성으로, 대기가 거의 없어 낮과 밤의 표면 온도 차이가 매우 큽니다. 태양계에서 공전 주기가 가장 짧은 행성이기도 합니다.",
+                orbitRadius: 9, orbitSpeed: 3.0, rotSpeed: 120, size: 0.6,
+                realOrbitRadius: 8.6, realSize: 0.38,
+                shininess: 12, specular: 0.25, texFile: "textures/2k_mercury.jpg", texUnit: 0
+            },
+            {
+                name: "금성 (Venus)",
+                desc: "두꺼운 이산화탄소 대기와 강한 온실효과로 표면 온도가 약 460°C에 달해, 태양계에서 가장 뜨거운 행성입니다. 자전 방향이 다른 행성들과 반대인 점도 독특합니다.",
+                orbitRadius: 12, orbitSpeed: 2.3, rotSpeed: 70, size: 0.95,
+                realOrbitRadius: 15.8, realSize: 0.95,
+                shininess: 20, specular: 0.35, texFile: "textures/2k_venus_surface.jpg", texUnit: 1
+            },
+            {
+                name: "지구 (Earth)",
+                desc: "액체 상태의 물과 생명체가 존재하는 것으로 알려진 유일한 행성입니다. 하나의 위성(달)을 거느리고 있으며, 대기와 자기장이 생명을 우주로부터 보호합니다.",
+                orbitRadius: 16, orbitSpeed: 1.8, rotSpeed: 200, size: 1.0,
+                realOrbitRadius: 22.0, realSize: 1.0,
+                shininess: 35, specular: 0.5, texFile: "textures/2k_earth_daymap.jpg", texUnit: 2, hasMoon: true
+            },
+            {
+                name: "화성 (Mars)",
+                desc: "표면의 산화철 성분 때문에 붉게 보여 '붉은 행성'이라 불립니다. 태양계에서 가장 큰 화산인 올림푸스 몬스가 있고, 과거 물이 흘렀던 흔적도 발견되었습니다.",
+                orbitRadius: 20, orbitSpeed: 1.4, rotSpeed: 190, size: 0.7,
+                realOrbitRadius: 33.4, realSize: 0.53,
+                shininess: 14, specular: 0.25, texFile: "textures/2k_mars.jpg", texUnit: 3
+            },
+            {
+                name: "목성 (Jupiter)",
+                desc: "태양계에서 가장 큰 행성으로, 가스로 이루어진 거대한 천체입니다. 표면의 대적점은 수백 년간 이어지고 있는 거대한 폭풍입니다.",
+                orbitRadius: 27, orbitSpeed: 0.95, rotSpeed: 260, size: 2.6,
+                realOrbitRadius: 114.4, realSize: 11.2,
+                shininess: 18, specular: 0.3, texFile: "textures/2k_jupiter.jpg", texUnit: 4
+            },
+            {
+                name: "토성 (Saturn)",
+                desc: "아름다운 고리로 잘 알려진 가스 행성으로, 고리는 얼음과 암석 조각들로 이루어져 있습니다. 밀도가 매우 낮아 거대한 물 웅덩이에 띄울 수 있을 정도입니다.",
+                orbitRadius: 35, orbitSpeed: 0.72, rotSpeed: 240, size: 2.2,
+                realOrbitRadius: 210.8, realSize: 9.45,
+                shininess: 18, specular: 0.3, texFile: "textures/2k_saturn.jpg", texUnit: 5, hasRing: true
+            },
+            {
+                name: "천왕성 (Uranus)",
+                desc: "자전축이 거의 누운 채로 공전하는 독특한 행성으로, 대기 중 메테인 성분 때문에 청록색을 띱니다. 극단적으로 긴 계절 변화를 가집니다.",
+                orbitRadius: 41, orbitSpeed: 0.55, rotSpeed: 180, size: 1.6,
+                realOrbitRadius: 422.0, realSize: 4.0,
+                shininess: 22, specular: 0.35, texFile: "textures/2k_uranus.jpg", texUnit: 6
+            },
+            {
+                name: "해왕성 (Neptune)",
+                desc: "태양에서 가장 멀리 떨어진 행성으로, 태양계에서 가장 강한 바람이 불어 시속 2,000km가 넘는 폭풍이 관측되기도 합니다.",
+                orbitRadius: 47, orbitSpeed: 0.42, rotSpeed: 185, size: 1.55,
+                realOrbitRadius: 661.5, realSize: 3.88,
+                shininess: 22, specular: 0.35, texFile: "textures/2k_neptune.jpg", texUnit: 7
+            }
+        ];
+
+        generateScene();
+        init();
+        setupMenuUI();
+        render();
+
+        // 메인화면 / 조작 방법 화면 / 시뮬레이션 화면 전환
+        function showScreen(state) {
+            appState = state;
+            document.getElementById('titleScreen').classList.toggle('hidden', state !== 'title');
+            document.getElementById('helpScreen').classList.toggle('hidden', state !== 'help');
+            document.getElementById('instructions').classList.toggle('hidden', state !== 'playing');
+        }
+
+        function setupMenuUI() {
+            document.getElementById('btnStart').addEventListener('click', function () { showScreen('playing'); });
+            document.getElementById('btnHelp').addEventListener('click', function () { showScreen('help'); });
+            document.getElementById('btnHelpBack').addEventListener('click', function () { showScreen('title'); });
+        }
+
+        function init() {
+            var canvas = document.getElementById('glCanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            gl = canvas.getContext('webgl2', { antialias: true });
+            if (!gl) {
+                alert("WebGL 2 is not available!");
+                return;
+            }
+
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clearColor(0.02, 0.02, 0.05, 1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            // ---- 정점 버퍼 (구/고리/원/별 — 모두 동일한 32바이트 stride로 한 버퍼에 들어있음) ----
+            program1 = initShaders(gl, "shaders/planet_vert.glsl", "shaders/planet_frag.glsl");
+            gl.useProgram(program1);
+
+            var vbufferId = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vbufferId);
+            gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 32, 12);
+            gl.enableVertexAttribArray(2);
+            gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 32, 24);
+
+            worldMatrix = mat4();
+            worldMatLoc1 = gl.getUniformLocation(program1, "worldMat");
+            viewMatLoc1 = gl.getUniformLocation(program1, "viewMat");
+            projMatLoc1 = gl.getUniformLocation(program1, "projMat");
+            texImageLoc1 = gl.getUniformLocation(program1, "texImage");
+            eyePosLoc1 = gl.getUniformLocation(program1, "eyePos");
+            sunPosLoc1 = gl.getUniformLocation(program1, "sunPos");
+            matShLoc1 = gl.getUniformLocation(program1, "matSh");
+            matSpecLoc1 = gl.getUniformLocation(program1, "matSpec");
+            matAmbiLoc1 = gl.getUniformLocation(program1, "matAmbi");
+            matEmitLoc1 = gl.getUniformLocation(program1, "matEmit");
+
+            viewMatrix = lookAt(eye, at, vec3(0, 1, 0));
+            var aspectRatio = canvas.width / canvas.height;
+            projectMatrix = perspective(60, aspectRatio, 0.1, 1600);  // 실제 비율 모드(해왕성 궤도 약 660)까지 보이도록 far를 넉넉히 잡음
+
+            gl.uniformMatrix4fv(worldMatLoc1, false, flatten(worldMatrix));
+            gl.uniformMatrix4fv(viewMatLoc1, false, flatten(viewMatrix));
+            gl.uniformMatrix4fv(projMatLoc1, false, flatten(projectMatrix));
+            gl.uniform3fv(eyePosLoc1, flatten(eye));
+            gl.uniform3f(sunPosLoc1, 0, 0, 0);   // 태양은 항상 원점의 점광원
+            gl.uniform3f(gl.getUniformLocation(program1, "srcDiff"), 1.0, 0.97, 0.9);
+            gl.uniform3f(gl.getUniformLocation(program1, "srcSpec"), 1.0, 0.97, 0.9);
+            gl.uniform3f(gl.getUniformLocation(program1, "srcAmbi"), 0.5, 0.5, 0.56);
+
+            // ---- 외부 텍스처 이미지 로드 (NASA 사진 기반, Solar System Scope 제공 / CC BY 4.0) ----
+            for (var i = 0; i < planets.length; i++) {
+                loadTexture(planets[i].texFile, planets[i].texUnit, false);
+            }
+            loadTexture("textures/2k_saturn_ring_alpha.png", RING_TEX_UNIT, true);
+            loadTexture("textures/2k_moon.jpg", MOON_TEX_UNIT, false);
+
+            // ---- program2 : 단색 셰이더 (피킹 / 별 / 궤도선 / 선택 하이라이트) ----
+            program2 = initShaders(gl, "shaders/uniform_color_vert.glsl", "shaders/uniform_color_frag.glsl");
+            gl.useProgram(program2);
+            worldMatLoc2 = gl.getUniformLocation(program2, "worldMat");
+            viewMatLoc2 = gl.getUniformLocation(program2, "viewMat");
+            projMatLoc2 = gl.getUniformLocation(program2, "projMat");
+            uColorLoc2 = gl.getUniformLocation(program2, "uColor");
+            gl.uniformMatrix4fv(viewMatLoc2, false, flatten(viewMatrix));
+            gl.uniformMatrix4fv(projMatLoc2, false, flatten(projectMatrix));
+
+            // ---- programSun : 태양 발광(노이즈 표면 + 펄싱 코로나) 셰이더 ----
+            programSun = initShaders(gl, "shaders/sun_vert.glsl", "shaders/sun_frag.glsl");
+            gl.useProgram(programSun);
+            worldMatLocS = gl.getUniformLocation(programSun, "worldMat");
+            viewMatLocS = gl.getUniformLocation(programSun, "viewMat");
+            projMatLocS = gl.getUniformLocation(programSun, "projMat");
+            eyePosLocS = gl.getUniformLocation(programSun, "eyePos");
+            timeLocS = gl.getUniformLocation(programSun, "uTime");
+            baseColorLocS = gl.getUniformLocation(programSun, "uBaseColor");
+            glowColorLocS = gl.getUniformLocation(programSun, "uGlowColor");
+            gl.uniformMatrix4fv(viewMatLocS, false, flatten(viewMatrix));
+            gl.uniformMatrix4fv(projMatLocS, false, flatten(projectMatrix));
+
+            gl.useProgram(program1);
+
+            // ---- 입력 처리 ----
+            function PickingObject(event) {
+                gl.useProgram(program2);
+                gl.clearColor(0, 0, 0, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.uniformMatrix4fv(viewMatLoc2, false, flatten(viewMatrix));
+                gl.uniformMatrix4fv(projMatLoc2, false, flatten(projectMatrix));
+
+                // 태양 : ID 1
+                gl.uniform4f(uColorLoc2, 1 / 255.0, 0, 1, 1);
+                gl.uniformMatrix4fv(worldMatLoc2, false, flatten(scalem(SUN_RADIUS, SUN_RADIUS, SUN_RADIUS)));
+                gl.drawArrays(gl.TRIANGLES, sphereGeo.offset, sphereGeo.count);
+
+                // 행성 : ID 10 + i
+                for (var i = 0; i < planets.length; i++) {
+                    var p = planets[i];
+                    var pos = planetPosition(p);
+                    var pickSize = currentSize(p);
+                    gl.uniform4f(uColorLoc2, (10 + i) / 255.0, 0, 1, 1);
+                    var wm = mult(translate(pos[0], pos[1], pos[2]), scalem(pickSize, pickSize, pickSize));
+                    gl.uniformMatrix4fv(worldMatLoc2, false, flatten(wm));
+                    gl.drawArrays(gl.TRIANGLES, sphereGeo.offset, sphereGeo.count);
+                }
+
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = rect.bottom - event.clientY;
+                const pixels = new Uint8Array(4);
+                gl.readPixels(mouseX, mouseY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+                const id = pixels[0];
+
+                if (id === 1) {
+                    selectedIndex = SUN_ID;
+                } else if (id >= 10 && id < 10 + planets.length) {
+                    selectedIndex = id - 10;
+                } else {
+                    selectedIndex = -1;
+                }
+                followTarget = (selectedIndex !== -1);   // 새로 선택하면 카메라가 그 천체를 부드럽게 추적 시작
+                updateInfoPanel();
+
+                gl.useProgram(program1);
+                gl.clearColor(0.02, 0.02, 0.05, 1.0);
+            }
+
+            // 일반적인 3D 게임처럼: 드래그하면 시점 회전, 제자리 클릭이면 천체 선택
+            canvas.addEventListener("mousedown", function (event) {
+                isDragging = true;
+                dragMoved = false;
+                lastPosX = mouseDownX = event.clientX;
+                lastPosY = mouseDownY = event.clientY;
+                canvas.style.cursor = "grab";
+            });
+
+            canvas.addEventListener("mouseup", function (event) {
+                if (isDragging && !dragMoved) {
+                    PickingObject(event);
+                }
+                isDragging = false;
+                canvas.style.cursor = "default";
+            });
+
+            canvas.addEventListener("mouseleave", function () {
+                isDragging = false;
+                canvas.style.cursor = "default";
+            });
+
+            canvas.addEventListener("mousemove", function (event) {
+                if (!isDragging) return;
+
+                var dx = event.clientX - lastPosX;
+                var dy = event.clientY - lastPosY;
+                lastPosX = event.clientX;
+                lastPosY = event.clientY;
+
+                if (Math.abs(event.clientX - mouseDownX) > DRAG_THRESHOLD ||
+                    Math.abs(event.clientY - mouseDownY) > DRAG_THRESHOLD) {
+                    dragMoved = true;
+                    followTarget = false;   // 사용자가 직접 시점을 돌리면 자동 추적을 해제해 조작권을 돌려준다
+                }
+
+                if (Math.abs(dx) > 0.1) yaw -= dx * 0.005;
+                if (Math.abs(dy) > 0.1) pitch -= dy * 0.005;
+                pitch = Math.max(-1.45, Math.min(1.45, pitch));
+                updateCameraVec();
+            });
+
+            canvas.addEventListener("wheel", function (event) {
+                event.preventDefault();
+                // 위로 스크롤 = 전진(확대), 아래로 스크롤 = 후진(축소)
+                var delta = (event.deltaY > 0) ? -1.5 : 1.5;
+                tryMoveEye(eye[0] + delta * cameraVec[0], eye[1] + delta * cameraVec[1], eye[2] + delta * cameraVec[2]);
+            }, { passive: false });
+
+            window.onkeydown = function (event) {
+                if (appState !== 'playing') return;   // 메인화면 / 조작 방법 화면에서는 단축키 무시
+
+                if (event.key === '+' || event.key === '=') {
+                    timeScale = Math.min(timeScale * 1.5, 8);
+                    updateSpeedLabel();
+                    return;
+                }
+                if (event.key === '-' || event.key === '_') {
+                    timeScale = Math.max(timeScale / 1.5, 0.1);
+                    updateSpeedLabel();
+                    return;
+                }
+                if (event.code === 'Space') {
+                    event.preventDefault();   // 스페이스바의 기본 동작(페이지 스크롤) 방지
+                    togglePause();
+                    return;
+                }
+                if (event.key === 'r' || event.key === 'R') {
+                    toggleScaleMode();
+                    return;
+                }
+
+                var key = String.fromCharCode(event.keyCode);
+                var moveStep = 1.4;
+                // 시선 방향(cameraVec)과 위쪽(0,1,0)을 외적해 "오른쪽" 방향 벡터를 구함 (좌우 이동용)
+                var right = normalize(cross(cameraVec, vec3(0, 1, 0)));
+                switch (key) {
+                    case 'A':
+                    case 'a':
+                        tryMoveEye(eye[0] - moveStep * right[0], eye[1] - moveStep * right[1], eye[2] - moveStep * right[2]);
+                        break;
+                    case 'D':
+                    case 'd':
+                        tryMoveEye(eye[0] + moveStep * right[0], eye[1] + moveStep * right[1], eye[2] + moveStep * right[2]);
+                        break;
+                    case 'W':
+                    case 'w':
+                        tryMoveEye(eye[0] + moveStep * cameraVec[0], eye[1] + moveStep * cameraVec[1], eye[2] + moveStep * cameraVec[2]);
+                        break;
+                    case 'S':
+                    case 's':
+                        tryMoveEye(eye[0] - moveStep * cameraVec[0], eye[1] - moveStep * cameraVec[1], eye[2] - moveStep * cameraVec[2]);
+                        break;
+                }
+            };
+
+            // 우주 공간을 자유롭게 비행하되, 태양에 충돌하거나 별이 보이는 한계 밖으로 나가지 않도록 제한
+            function tryMoveEye(nx, ny, nz) {
+                var dist = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                if (dist > MIN_CAMERA_RADIUS && dist < maxCameraRadius) {
+                    eye[0] = nx; eye[1] = ny; eye[2] = nz;
+                }
+            }
+
+            window.onresize = function () {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                var aspectRatio = canvas.width / canvas.height;
+                projectMatrix = perspective(60, aspectRatio, 0.1, 1600);  // 실제 비율 모드(해왕성 궤도 약 660)까지 보이도록 far를 넉넉히 잡음
+
+                gl.useProgram(program1);
+                gl.uniformMatrix4fv(projMatLoc1, false, flatten(projectMatrix));
+                gl.useProgram(programSun);
+                gl.uniformMatrix4fv(projMatLocS, false, flatten(projectMatrix));
+                gl.useProgram(program1);
+            };
+        }
+
+        // yaw(좌우)/pitch(상하) 각도로부터 시선 방향 벡터를 다시 계산
+        function updateCameraVec() {
+            cameraVec[0] = Math.cos(pitch) * Math.sin(yaw);
+            cameraVec[1] = Math.sin(pitch);
+            cameraVec[2] = Math.cos(pitch) * Math.cos(yaw);
+        }
+
+        function updateSpeedLabel() {
+            var label = document.getElementById('speedLabel');
+            if (!label) return;
+            label.textContent = (timeScale === 0) ? '일시정지' : 'x' + (Math.round(timeScale * 100) / 100);
+        }
+
+        // Space바 — 공전/자전을 멈추거나, 멈추기 전 배속으로 되돌린다
+        function togglePause() {
+            if (pausedTimeScale === null) {
+                pausedTimeScale = timeScale;
+                timeScale = 0;
+            } else {
+                timeScale = pausedTimeScale;
+                pausedTimeScale = null;
+            }
+            updateSpeedLabel();
+        }
+
+        // R — "관측하기 좋은" 압축 비율과 "실제 천문학적" 비율 사이를 전환 (먼 거리만큼 비행 한계도 함께 늘어남)
+        function toggleScaleMode() {
+            scaleMode = (scaleMode === 'compressed') ? 'real' : 'compressed';
+            maxCameraRadius = (scaleMode === 'real') ? REAL_MAX_CAMERA_RADIUS : COMPRESSED_MAX_CAMERA_RADIUS;
+            updateScaleModeLabel();
+        }
+
+        function updateScaleModeLabel() {
+            var label = document.getElementById('scaleModeLabel');
+            if (!label) return;
+            label.textContent = (scaleMode === 'real')
+                ? '실제 비율 — 행성이 매우 작고 멀어 보임'
+                : '압축 비율';
+        }
+
+        function currentOrbitRadius(p) {
+            return (scaleMode === 'real') ? p.realOrbitRadius : p.orbitRadius;
+        }
+
+        function currentSize(p) {
+            return (scaleMode === 'real') ? p.realSize : p.size;
+        }
+
+        // 현재 선택된 천체(태양 포함)의 월드 좌표. 선택된 것이 없으면 null
+        function selectedWorldPosition() {
+            if (selectedIndex === SUN_ID) return [0, 0, 0];
+            if (selectedIndex >= 0 && selectedIndex < planets.length) return planetPosition(planets[selectedIndex]);
+            return null;
+        }
+
+        // 정규화된 시선 방향 벡터로부터 yaw/pitch를 역산 (updateCameraVec의 역연산)
+        function yawPitchFromDirection(dir) {
+            return [Math.atan2(dir[0], dir[2]), Math.atan2(dir[1], Math.sqrt(dir[0] * dir[0] + dir[2] * dir[2]))];
+        }
+
+        // 두 각도 사이의 최단 차이 (-PI ~ PI 범위로 정규화 — 회전 방향이 갑자기 뒤집히는 것을 방지)
+        function angleDiff(target, current) {
+            var diff = target - current;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            return diff;
+        }
+
+        function updateInfoPanel() {
+            var panel = document.getElementById('infoPanel');
+            if (selectedIndex === -1) {
+                panel.classList.remove('visible');
+                return;
+            }
+            var info = (selectedIndex === SUN_ID) ? sunInfo : planets[selectedIndex];
+            document.getElementById('infoTitle').textContent = info.name;
+            document.getElementById('infoDesc').textContent = info.desc;
+            panel.classList.add('visible');
+        }
+
+        // 행성의 현재 공전 위치 (XZ 평면 위의 원궤도)
+        function planetPosition(p) {
+            var angle = globalAngle * p.orbitSpeed;
+            var r = currentOrbitRadius(p);
+            return [r * Math.cos(angle), 0, r * Math.sin(angle)];
+        }
+
+        function render() {
+            var now = Date.now();
+            var dt = (now - lastTime) / 1000;
+            lastTime = now;
+            globalAngle += dt * timeScale * ORBIT_TIME_SCALE;
+            var elapsed = (now - startTime) / 1000;
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // ---- 포커스 모드: 선택된 천체를 시선이 부드럽게 따라가도록 yaw/pitch를 보간 ----
+            // (eye는 그대로 두어 사용자의 자유비행 위치를 유지하고, "바라보는 방향"만 자동으로 추적한다 — 망원경의 추적 기능과 같은 개념)
+            if (followTarget) {
+                var targetPos = selectedWorldPosition();
+                if (targetPos) {
+                    var dir = normalize(subtract(targetPos, eye));
+                    var targetAngles = yawPitchFromDirection(dir);
+                    var lerpFactor = Math.min(1, dt * FOLLOW_LERP_SPEED);
+                    yaw += angleDiff(targetAngles[0], yaw) * lerpFactor;
+                    pitch += angleDiff(targetAngles[1], pitch) * lerpFactor;
+                    pitch = Math.max(-1.45, Math.min(1.45, pitch));
+                    updateCameraVec();
+                }
+            }
+
+            at[0] = eye[0] + cameraVec[0];
+            at[1] = eye[1] + cameraVec[1];
+            at[2] = eye[2] + cameraVec[2];
+            viewMatrix = lookAt(eye, at, vec3(0, 1, 0));
+
+            // ---- 별 배경 (program2, 흰 점) ----
+            gl.useProgram(program2);
+            gl.uniformMatrix4fv(viewMatLoc2, false, flatten(viewMatrix));
+            gl.uniformMatrix4fv(projMatLoc2, false, flatten(projectMatrix));
+            gl.uniformMatrix4fv(worldMatLoc2, false, flatten(mat4()));
+            gl.uniform4f(uColorLoc2, 1, 1, 1, 1);
+            gl.drawArrays(gl.POINTS, starGeo.offset, starGeo.count);
+
+            // ---- 궤도 안내선 (program2, 옅은 회색-파랑 원) ----
+            gl.uniform4f(uColorLoc2, 0.55, 0.62, 0.85, 0.22);
+            for (var i = 0; i < planets.length; i++) {
+                var orbitR = currentOrbitRadius(planets[i]);
+                var orbitWm = scalem(orbitR, 1, orbitR);
+                gl.uniformMatrix4fv(worldMatLoc2, false, flatten(orbitWm));
+                gl.drawArrays(gl.LINE_LOOP, circleGeo.offset, circleGeo.count);
+            }
+
+            // ---- 태양 (programSun, 발광 + 펄싱 코로나) ----
+            gl.useProgram(programSun);
+            gl.uniformMatrix4fv(viewMatLocS, false, flatten(viewMatrix));
+            gl.uniform3fv(eyePosLocS, flatten(eye));
+            gl.uniformMatrix4fv(worldMatLocS, false, flatten(scalem(SUN_RADIUS, SUN_RADIUS, SUN_RADIUS)));
+            gl.uniform1f(timeLocS, elapsed);
+            gl.uniform3f(baseColorLocS, 1.0, 0.72, 0.28);
+            gl.uniform3f(glowColorLocS, 1.0, 0.45, 0.12);
+            gl.drawArrays(gl.TRIANGLES, sphereGeo.offset, sphereGeo.count);
+
+            // ---- 행성 / 고리 / 위성 (program1, 점광원 Blinn-Phong + 텍스처) ----
+            gl.useProgram(program1);
+            gl.uniformMatrix4fv(viewMatLoc1, false, flatten(viewMatrix));
+            gl.uniform3fv(eyePosLoc1, flatten(eye));
+
+            for (var i = 0; i < planets.length; i++) {
+                var p = planets[i];
+                var pos = planetPosition(p);
+                var size = currentSize(p);
+                var spinDeg = globalAngle * p.rotSpeed;
+                var wm = mult(translate(pos[0], pos[1], pos[2]), mult(rotate(spinDeg, vec3(0, 1, 0)), scalem(size, size, size)));
+
+                gl.uniformMatrix4fv(worldMatLoc1, false, flatten(wm));
+                gl.uniform1i(texImageLoc1, p.texUnit);
+                gl.uniform1f(matShLoc1, p.shininess);
+                gl.uniform3f(matSpecLoc1, p.specular, p.specular, p.specular);
+                gl.uniform3f(matAmbiLoc1, 0.34, 0.34, 0.34);
+                gl.uniform3f(matEmitLoc1, 0, 0, 0);
+                gl.drawArrays(gl.TRIANGLES, sphereGeo.offset, sphereGeo.count);
+
+                if (p.hasRing) {
+                    var ringWm = mult(translate(pos[0], pos[1], pos[2]), scalem(size, size, size));
+                    gl.uniformMatrix4fv(worldMatLoc1, false, flatten(ringWm));
+                    gl.uniform1i(texImageLoc1, RING_TEX_UNIT);
+                    gl.uniform1f(matShLoc1, 8);
+                    gl.uniform3f(matSpecLoc1, 0.05, 0.05, 0.05);
+                    gl.drawArrays(gl.TRIANGLES, ringGeo.offset, ringGeo.count);
+                }
+
+                if (p.hasMoon) {
+                    var moonAngle = globalAngle * MOON_ORBIT_SPEED;
+                    var mx = pos[0] + MOON_ORBIT_RADIUS * Math.cos(moonAngle);
+                    var mz = pos[2] + MOON_ORBIT_RADIUS * Math.sin(moonAngle);
+                    var moonWm = mult(translate(mx, pos[1], mz), mult(rotate(globalAngle * 140, vec3(0, 1, 0)), scalem(MOON_SIZE, MOON_SIZE, MOON_SIZE)));
+                    gl.uniformMatrix4fv(worldMatLoc1, false, flatten(moonWm));
+                    gl.uniform1i(texImageLoc1, MOON_TEX_UNIT);
+                    gl.uniform1f(matShLoc1, 12);
+                    gl.uniform3f(matSpecLoc1, 0.1, 0.1, 0.1);
+                    gl.drawArrays(gl.TRIANGLES, sphereGeo.offset, sphereGeo.count);
+                }
+            }
+
+            // ---- 선택된 천체 주위에 펄싱하는 하이라이트 링 (program2) ----
+            if (selectedIndex !== -1) {
+                var selPos = selectedWorldPosition();
+                var selSize = (selectedIndex === SUN_ID) ? SUN_RADIUS : currentSize(planets[selectedIndex]);
+                var ringR = selSize * (1.55 + 0.18 * Math.sin(elapsed * 3.0));
+
+                gl.useProgram(program2);
+                gl.uniformMatrix4fv(viewMatLoc2, false, flatten(viewMatrix));
+                var hlWm = mult(translate(selPos[0], selPos[1], selPos[2]), scalem(ringR, 1, ringR));
+                gl.uniformMatrix4fv(worldMatLoc2, false, flatten(hlWm));
+                gl.uniform4f(uColorLoc2, 1.0, 0.85, 0.3, 0.85);
+                gl.drawArrays(gl.LINE_LOOP, circleGeo.offset, circleGeo.count);
+            }
+
+            window.requestAnimationFrame(render);
+        }
+
+        // ============================================================
+        //  절차적 지오메트리 생성 — vertices에 (위치/법선/UV) 평탄 삼각형 리스트로 채우고
+        //  loadOBJModel()과 같은 형태인 {offset, count}를 반환한다 (gl.drawArrays 호환)
+        // ============================================================
+        function generateScene() {
+            sphereGeo = generateSphere(1.0, 24, 36);
+            ringGeo = generateRing(1.5, 2.6, 64);
+            circleGeo = generateCircleOutline(1.0, 96);
+            starGeo = generateStarField(1500, 130);
+        }
+
+        function pushVertex(px, py, pz, nx, ny, nz, u, v) {
+            vertices.push(vec3(px, py, pz), vec3(nx, ny, nz), vec2(u, v));
+        }
+
+        function sphericalPoint(r, theta, phi) {
+            return [r * Math.sin(theta) * Math.cos(phi), r * Math.cos(theta), r * Math.sin(theta) * Math.sin(phi)];
+        }
+
+        // 위도(latBands) x 경도(lonBands) 분할 UV 구 — 단위 반지름, worldMat의 scalem으로 실제 크기 결정
+        function generateSphere(radius, latBands, lonBands) {
+            var startVertexCount = vertices.length / 3;
+            for (var lat = 0; lat < latBands; lat++) {
+                var theta1 = lat * Math.PI / latBands;
+                var theta2 = (lat + 1) * Math.PI / latBands;
+                for (var lon = 0; lon < lonBands; lon++) {
+                    var phi1 = lon * 2 * Math.PI / lonBands;
+                    var phi2 = (lon + 1) * 2 * Math.PI / lonBands;
+
+                    var p11 = sphericalPoint(radius, theta1, phi1), p12 = sphericalPoint(radius, theta1, phi2);
+                    var p21 = sphericalPoint(radius, theta2, phi1), p22 = sphericalPoint(radius, theta2, phi2);
+                    var v1 = theta1 / Math.PI, v2 = theta2 / Math.PI;
+                    var u1 = phi1 / (2 * Math.PI), u2 = phi2 / (2 * Math.PI);
+
+                    // 구의 중심이 원점이므로 법선 = 위치 방향(정규화)
+                    addTri(p11, p21, p22, [u1, v1], [u1, v2], [u2, v2], radius);
+                    addTri(p11, p22, p12, [u1, v1], [u2, v2], [u2, v1], radius);
+                }
+            }
+            return { offset: startVertexCount, count: vertices.length / 3 - startVertexCount };
+
+            function addTri(a, b, c, uvA, uvB, uvC, r) {
+                pushVertex(a[0], a[1], a[2], a[0] / r, a[1] / r, a[2] / r, uvA[0], uvA[1]);
+                pushVertex(b[0], b[1], b[2], b[0] / r, b[1] / r, b[2] / r, uvB[0], uvB[1]);
+                pushVertex(c[0], c[1], c[2], c[0] / r, c[1] / r, c[2] / r, uvC[0], uvC[1]);
+            }
+        }
+
+        // 안쪽 반지름 ~ 바깥 반지름의 평평한 원환(고리) — XZ 평면, 법선은 +Y
+        function generateRing(innerR, outerR, segments) {
+            var startVertexCount = vertices.length / 3;
+            for (var i = 0; i < segments; i++) {
+                var a1 = i / segments * 2 * Math.PI, a2 = (i + 1) / segments * 2 * Math.PI;
+                var c1 = Math.cos(a1), s1 = Math.sin(a1), c2 = Math.cos(a2), s2 = Math.sin(a2);
+                var u1 = i / segments, u2 = (i + 1) / segments;
+
+                var inner1 = [innerR * c1, 0, innerR * s1], outer1 = [outerR * c1, 0, outerR * s1];
+                var inner2 = [innerR * c2, 0, innerR * s2], outer2 = [outerR * c2, 0, outerR * s2];
+
+                pushVertex(inner1[0], inner1[1], inner1[2], 0, 1, 0, u1, 0);
+                pushVertex(outer1[0], outer1[1], outer1[2], 0, 1, 0, u1, 1);
+                pushVertex(outer2[0], outer2[1], outer2[2], 0, 1, 0, u2, 1);
+
+                pushVertex(inner1[0], inner1[1], inner1[2], 0, 1, 0, u1, 0);
+                pushVertex(outer2[0], outer2[1], outer2[2], 0, 1, 0, u2, 1);
+                pushVertex(inner2[0], inner2[1], inner2[2], 0, 1, 0, u2, 0);
+            }
+            return { offset: startVertexCount, count: vertices.length / 3 - startVertexCount };
+        }
+
+        // 단위 원의 둘레 정점들(LINE_LOOP용) — 궤도 안내선과 선택 하이라이트 링에 재사용 (worldMat의 scalem으로 반지름 결정)
+        function generateCircleOutline(radius, segments) {
+            var startVertexCount = vertices.length / 3;
+            for (var i = 0; i < segments; i++) {
+                var a = i / segments * 2 * Math.PI;
+                pushVertex(radius * Math.cos(a), 0, radius * Math.sin(a), 0, 1, 0, 0, 0);
+            }
+            return { offset: startVertexCount, count: segments };
+        }
+
+        // 큰 구 표면 위에 무작위로 흩뿌린 점들(gl.POINTS) — 별 배경
+        function generateStarField(count, radius) {
+            var startVertexCount = vertices.length / 3;
+            for (var i = 0; i < count; i++) {
+                var u = Math.random(), v = Math.random();
+                var theta = Math.acos(2 * u - 1);
+                var phi = 2 * Math.PI * v;
+                var r = radius * (0.9 + Math.random() * 0.1);
+                var p = sphericalPoint(r, theta, phi);
+                pushVertex(p[0], p[1], p[2], 0, 1, 0, 0, 0);
+            }
+            return { offset: startVertexCount, count: count };
+        }
+
+        // ============================================================
+        //  외부 텍스처 이미지 로딩 — NASA 사진 기반 실사 행성 텍스처
+        //  (출처: Solar System Scope, https://www.solarsystemscope.com/textures/, CC BY 4.0)
+        // ============================================================
+        // 이미지가 비동기로 로드되는 동안에도 렌더링이 끊기지 않도록, 우선 1x1 단색 텍스처를
+        // 올려두고 onload 시점에 실제 이미지로 교체한다 (표준 WebGL 비동기 텍스처 로딩 패턴)
+        function loadTexture(url, texUnit, hasAlpha) {
+            gl.activeTexture(gl.TEXTURE0 + texUnit);
+            var texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            var placeholder = hasAlpha ? new Uint8Array([255, 255, 255, 0]) : new Uint8Array([160, 160, 160, 255]);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, placeholder);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            var image = new Image();
+            image.onload = function () {
+                gl.activeTexture(gl.TEXTURE0 + texUnit);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                if (hasAlpha) {
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                } else {
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                }
+            };
+            image.src = url;
+        }
+    </script>
+</body>
+
+</html>
