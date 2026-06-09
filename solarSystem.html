@@ -122,6 +122,38 @@
             font-weight: bold;
         }
 
+        #speedControls {
+            position: fixed;
+            left: 20px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: #eaeaea;
+            background: rgba(20, 20, 28, 0.55);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .speedRow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speedRow input[type="range"] {
+            width: 140px;
+            cursor: pointer;
+        }
+
+        .speedRow span {
+            color: #ffd863;
+            font-weight: bold;
+            min-width: 38px;
+            text-align: right;
+        }
+
         #infoPanel {
             position: fixed;
             right: 24px;
@@ -164,8 +196,8 @@
         <div class="menuBox">
             <h1>태양계 관측 시뮬레이터</h1>
             <p class="subtitle">
-                실시간 3D로 구현된 태양계를 자유롭게 비행하며 관측하는 시뮬레이터입니다.<br>
-                태양과 8개의 행성을 가까이서 살펴보고, 시간 배속과 거리·크기 비율을 바꿔가며 탐험해보세요.
+                실시간 3D로 구현된 태양계를 <br>자유롭게 비행하며 관측하는 시뮬레이터입니다.<br>
+                태양과 8개의 행성을 가까이서 살펴보고, <br>시간 배속과 거리·크기 비율을 바꿔가며 탐험해보세요.
             </p>
             <div class="menuButtons">
                 <button id="btnStart" class="menuBtn">시작</button>
@@ -180,11 +212,11 @@
             <ul class="helpList">
                 <li><b>W A S D</b><span>전진 / 후진 / 좌우 이동</span></li>
                 <li><b>마우스 드래그</b><span>시점 회전 (상하 포함)</span></li>
-                <li><b>마우스 휠</b><span>확대 / 축소</span></li>
-                <li><b>클릭</b><span>천체 선택 — 선택하면 카메라가 자동으로 따라가며, 드래그하면 추적이 풀립니다</span></li>
-                <li><b>+ / -</b><span>공전 속도 배율 조절</span></li>
+                <li><b>마우스 휠</b><span>확대 / 축소 (전진 / 후진)</span></li>
+                <li><b>좌하단 슬라이더</b><span>이동(WASD) 및 확대·축소(휠), 공전 속도 조절</span></li>
+                <li><b>클릭</b><span>천체 선택 : 선택하면 카메라가 자동으로 따라가며,<br> 드래그하면 추적이 풀립니다</span></li>
                 <li><b>Space</b><span>일시정지 / 재생</span></li>
-                <li><b>R</b><span>실제 비율 ↔ 압축 비율 전환</span></li>
+                <li><b>R</b><span>실제 비율 모드 ↔ 압축 비율 모드 전환</span></li>
             </ul>
             <div class="menuButtons">
                 <button id="btnHelpBack" class="menuBtn">뒤로 가기</button>
@@ -193,10 +225,21 @@
     </div>
 
     <div id="instructions" class="hidden">
-        W A S D : 전진 / 후진 / 좌우 이동&nbsp;&nbsp;|&nbsp;&nbsp;마우스 드래그 : 시점 회전 (상하 포함)<br>
-        마우스 휠 : 확대 / 축소&nbsp;&nbsp;|&nbsp;&nbsp;클릭 : 천체 선택 (자동 추적 시작, 드래그하면 해제)<br>
-        + / - : 공전 속도 배율 (현재 <span id="speedLabel">x1</span>)&nbsp;&nbsp;|&nbsp;&nbsp;Space : 일시정지<br>
-        R : 비율 전환 (현재 <span id="scaleModeLabel">압축 비율</span>)
+        W A S D : 전진 / 후진 / 좌우 이동&nbsp;&nbsp;|&nbsp;&nbsp;마우스 드래그 : 시점 회전<br>
+        마우스 휠 : 확대 / 축소&nbsp;&nbsp;|&nbsp;&nbsp;클릭 : 천체 선택 <br>
+        Space : 일시정지&nbsp;&nbsp;|&nbsp;&nbsp;R : 비율 전환 (현재: <span id="scaleModeLabel">압축 비율 모드</span>)
+    </div>
+    <div id="speedControls" class="hidden">
+        <div class="speedRow">
+            <label for="moveSpeedSlider">이동 / 확대축소 속도</label>
+            <input type="range" id="moveSpeedSlider" min="0.2" max="10.0" step="0.1" value="1">
+            <span id="moveSpeedValue">x1.0</span>
+        </div>
+        <div class="speedRow">
+            <label for="orbitSpeedSlider">공전 속도</label>
+            <input type="range" id="orbitSpeedSlider" min="0.1" max="8.0" step="0.1" value="1">
+            <span id="orbitSpeedValue">x1.0</span>
+        </div>
     </div>
     <div id="infoPanel">
         <h2 id="infoTitle"></h2>
@@ -219,6 +262,9 @@
         const ORBIT_TIME_SCALE = 0.25;     // globalAngle 누적 속도 (관측하기 좋도록 압축한 값)
         const MIN_CAMERA_RADIUS = 6;
         const COMPRESSED_MAX_CAMERA_RADIUS = 150, REAL_MAX_CAMERA_RADIUS = 720;
+        // 실제 비율 모드에서 해왕성 궤도(약 661.5)·최대 비행 반경(720)보다 바깥에 있어야
+        // 별이 "행성을 둘러싼 구"가 아니라 행성계 전체를 감싸는 먼 배경으로 보인다
+        const STAR_FIELD_RADIUS = 800;
         var maxCameraRadius = COMPRESSED_MAX_CAMERA_RADIUS;   // 비율 모드에 따라 바뀌는 비행 한계
 
         // ---- 실제 비율 vs 압축 비율 토글 ----
@@ -234,6 +280,7 @@
         var yaw = Math.atan2(-eye[0], -eye[2]);
         var pitch = Math.atan2(-eye[1], Math.sqrt(eye[0] * eye[0] + eye[2] * eye[2]));
         updateCameraVec();
+        var cameraSpeedMultiplier = 1.0;   // 슬라이더로 조절하는 이동(WASD)/확대축소(휠) 속도 배율
         var isDragging = false;
         var dragMoved = false;
         var lastPosX = 0, lastPosY = 0;
@@ -340,12 +387,25 @@
             document.getElementById('titleScreen').classList.toggle('hidden', state !== 'title');
             document.getElementById('helpScreen').classList.toggle('hidden', state !== 'help');
             document.getElementById('instructions').classList.toggle('hidden', state !== 'playing');
+            document.getElementById('speedControls').classList.toggle('hidden', state !== 'playing');
         }
 
         function setupMenuUI() {
             document.getElementById('btnStart').addEventListener('click', function () { showScreen('playing'); });
             document.getElementById('btnHelp').addEventListener('click', function () { showScreen('help'); });
             document.getElementById('btnHelpBack').addEventListener('click', function () { showScreen('title'); });
+
+            document.getElementById('moveSpeedSlider').addEventListener('input', function (event) {
+                cameraSpeedMultiplier = parseFloat(event.target.value);
+                document.getElementById('moveSpeedValue').textContent = 'x' + cameraSpeedMultiplier.toFixed(1);
+            });
+
+            // 공전 속도 슬라이더 — 값을 바꾸면 그 배속으로 즉시 재생(일시정지 상태였다면 해제)
+            document.getElementById('orbitSpeedSlider').addEventListener('input', function (event) {
+                pausedTimeScale = null;
+                timeScale = parseFloat(event.target.value);
+                updateSpeedLabel();
+            });
         }
 
         function init() {
@@ -527,23 +587,13 @@
             canvas.addEventListener("wheel", function (event) {
                 event.preventDefault();
                 // 위로 스크롤 = 전진(확대), 아래로 스크롤 = 후진(축소)
-                var delta = (event.deltaY > 0) ? -1.5 : 1.5;
+                var delta = ((event.deltaY > 0) ? -1.5 : 1.5) * cameraSpeedMultiplier;
                 tryMoveEye(eye[0] + delta * cameraVec[0], eye[1] + delta * cameraVec[1], eye[2] + delta * cameraVec[2]);
             }, { passive: false });
 
             window.onkeydown = function (event) {
                 if (appState !== 'playing') return;   // 메인화면 / 조작 방법 화면에서는 단축키 무시
 
-                if (event.key === '+' || event.key === '=') {
-                    timeScale = Math.min(timeScale * 1.5, 8);
-                    updateSpeedLabel();
-                    return;
-                }
-                if (event.key === '-' || event.key === '_') {
-                    timeScale = Math.max(timeScale / 1.5, 0.1);
-                    updateSpeedLabel();
-                    return;
-                }
                 if (event.code === 'Space') {
                     event.preventDefault();   // 스페이스바의 기본 동작(페이지 스크롤) 방지
                     togglePause();
@@ -555,7 +605,7 @@
                 }
 
                 var key = String.fromCharCode(event.keyCode);
-                var moveStep = 1.4;
+                var moveStep = 1.4 * cameraSpeedMultiplier;
                 // 시선 방향(cameraVec)과 위쪽(0,1,0)을 외적해 "오른쪽" 방향 벡터를 구함 (좌우 이동용)
                 var right = normalize(cross(cameraVec, vec3(0, 1, 0)));
                 switch (key) {
@@ -610,7 +660,7 @@
         }
 
         function updateSpeedLabel() {
-            var label = document.getElementById('speedLabel');
+            var label = document.getElementById('orbitSpeedValue');
             if (!label) return;
             label.textContent = (timeScale === 0) ? '일시정지' : 'x' + (Math.round(timeScale * 100) / 100);
         }
@@ -638,8 +688,8 @@
             var label = document.getElementById('scaleModeLabel');
             if (!label) return;
             label.textContent = (scaleMode === 'real')
-                ? '실제 비율 — 행성이 매우 작고 멀어 보임'
-                : '압축 비율';
+                ? '실제 비율 모드'
+                : '압축 비율 모드';
         }
 
         function currentOrbitRadius(p) {
@@ -812,7 +862,7 @@
             sphereGeo = generateSphere(1.0, 24, 36);
             ringGeo = generateRing(1.5, 2.6, 64);
             circleGeo = generateCircleOutline(1.0, 96);
-            starGeo = generateStarField(1500, 130);
+            starGeo = generateStarField(1500, STAR_FIELD_RADIUS);
         }
 
         function pushVertex(px, py, pz, nx, ny, nz, u, v) {
